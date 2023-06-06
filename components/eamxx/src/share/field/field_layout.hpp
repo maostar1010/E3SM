@@ -77,6 +77,7 @@ public:
   // The rank is the number of tags associated to this field.
   int     rank () const  { return m_rank; }
 
+  int dim_idx (const FieldTag tag) const;
   int dim (const FieldTag tag) const;
   int dim (const int idim) const;
   const std::vector<int>& dims () const { return m_dims; }
@@ -117,7 +118,7 @@ std::string to_string (const FieldLayout& l);
 
 // ========================== IMPLEMENTATION ======================= //
 
-inline int FieldLayout::dim (const FieldTag t) const {
+inline int FieldLayout::dim_idx (const FieldTag t) const {
   auto it = ekat::find(m_tags,t);
 
   // Check if found
@@ -128,7 +129,11 @@ inline int FieldLayout::dim (const FieldTag t) const {
                      "Error! Tag '" + e2str(t) + "' appears multiple times.\n"
                      "       You must inspect tags() and dims() manually.\n");
 
-  return m_dims[std::distance(m_tags.begin(),it)];
+  return std::distance(m_tags.begin(),it);
+}
+
+inline int FieldLayout::dim (const FieldTag t) const {
+  return m_dims[dim_idx(t)];
 }
 
 inline int FieldLayout::dim (const int idim) const {

@@ -240,16 +240,23 @@ struct FieldRequest {
    : FieldRequest(FID(name,layout,u,grid),std::list<std::string>{group},ps)
   { /* Nothing to do here */ }
 
-  FieldRequest (const FID& fid, const FieldRequest& parent, int idim, int k, bool dynamic)
+  FieldRequest (const FID& fid, const std::string& parent, const SubviewInfo& sv_info)
    : FieldRequest (fid)
-  {
-    subview_info.dim_idx = idim;
-    subview_info.slice_idx = k;
-    subview_info.dim_extent = parent.fid.get_layout().dim(idim);
-    subview_info.dynamic = dynamic;
+   , subview_info (sv_info)
+   , parent_name (parent)
+  { /* Nothing to do here */ }
 
-    parent_name = parent.fid.name();
+  FieldRequest (const FID& fid, const std::string& parent, const FieldLayout& pl, const FieldTag sv_tag, const int sv_idx)
+   : FieldRequest (fid)
+   , parent_name (parent)
+  {
+    subview_info.slice_idx = slice;
+    subview_info.dim_idx = pl.dim_idx(tag);
   }
+
+  FieldRequest (const FID& fid, const std::string& parent, const FieldLayout& pl, const int sv_idx)
+   : FieldRequest (fid,parent,pl,FieldTag::Component,sv_idx)
+  { /* Nothing to do here */ }
 
   // Data
   FieldIdentifier           fid;

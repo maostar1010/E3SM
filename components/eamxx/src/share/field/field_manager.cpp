@@ -57,6 +57,9 @@ void FieldManager::register_field (const FieldRequest& req)
     // This is a request for a subfield. Store request info, so we can correctly set up
     // the subfield at the end of registration_ends() call
     m_subfield_requests.emplace(id.name(),req);
+    EKAT_REQUIRE_MSG (req.pack_size==1,
+        "Error! Cannot accommodate requests for pack sizes for subfields.\n"
+        " - field name: " + id.name() + "\n");
   } else {
     // Make sure the field can accommodate the requested value type
     m_fields[id.name()]->get_header().get_alloc_properties().request_allocation(req.pack_size);
@@ -684,9 +687,36 @@ void FieldManager::registration_ends ()
       // If the field has been already allocated, then it was in a bunlded group, so skip it.
       continue;
     }
-    // A brand new field. Allocate it
-    it.second->allocate_view();
+    // A brand new field. Skip subfields until all other fields are allocated
+    if (m_subfield_requests.count(it.first)==0) {
+      it.second->allocate_view();
+    }
   }
+
+  auto create_subfield = [&](const std::string& name, auto&& ensure_parent)
+  {
+    const auto& pn = m_subfield_requests.at(name).parent_name;
+    std::shared_ptr<Field> p;
+    if (m_subfield_requests.count(pn)==1) {
+      ensure_parent (pn,ensure_parent);
+    }
+    auto p = m_fields.at(pn);
+
+    const auto& svi = m_subfield_requests.at(name).subview_info;
+    m_fields.at(name) = p->subfield(name,svi.dim_idx,svi.slice_idx,svi.dynamic);
+  };
+
+  for (auto& it : m_fields) {
+    if (not it.second->is_allocated()) {
+      // Must be a subfield
+      EKAT_REQUIRE_MSG (m_subfield_requests.count(it.first)==1,
+          "Error! Found a field that is not a subfield, and yet was not yet allocated.\n"
+          " - name: " + it.first + "\n");
+
+      create_subfield(it.first,create_subfield);
+    }
+  }
+
 
   for (const auto& it : m_field_groups) {
     if (ekat::contains(copied_groups,it.first)) {

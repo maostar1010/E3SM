@@ -229,6 +229,8 @@ public:
   //     to store a stride for the slowest dimension.
   //   - If dynamic = true, it is possible to "reset" the slice index (k) at runtime.
   Field subfield (const std::string& sf_name, const ekat::units::Units& sf_units,
+                  const FieldTag tag, const int index, const bool dynamic) const
+  Field subfield (const std::string& sf_name, const ekat::units::Units& sf_units,
                        const int idim, const int index, const bool dynamic = false) const;
   Field subfield (const std::string& sf_name, const int idim,
                        const int index, const bool dynamic = false) const;

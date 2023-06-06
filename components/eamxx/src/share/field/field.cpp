@@ -80,6 +80,16 @@ sync_to_dev () const {
 
 Field Field::
 subfield (const std::string& sf_name, const ekat::units::Units& sf_units,
+          const FieldTag tag, const int index, const bool dynamic) const
+{
+  const auto& id = m_header->get_identifier();
+  const auto& lt = id.get_layout();
+  const int dim_idx = lt.dim_idx(tag);
+  return subfield(sf_name,sf_units,tag,index,dynamic);
+}
+
+Field Field::
+subfield (const std::string& sf_name, const ekat::units::Units& sf_units,
           const int idim, const int index, const bool dynamic) const {
 
   const auto& id = m_header->get_identifier();

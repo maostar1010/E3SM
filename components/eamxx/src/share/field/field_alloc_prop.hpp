@@ -67,6 +67,7 @@ struct SubviewInfo {
   SubviewInfo (const SubviewInfo&) = default;
   SubviewInfo& operator= (const SubviewInfo&) = default;
 
+  FieldTag dim_tag = FieldTag::Invalid; // The tag along which slicing happened
   int dim_idx    = -1;  // Dimension along which slicing happened
   int slice_idx  = -1;  // Slice along dimension $dim_idx
   int dim_extent = -1;  // Extent of dimension $dim_idx
