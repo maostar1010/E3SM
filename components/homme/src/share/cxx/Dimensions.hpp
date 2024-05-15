@@ -9,9 +9,12 @@
 
 #include <Kokkos_Core.hpp>
 
+#include "Types.hpp"
 #include "Config.hpp"
 
 namespace Homme {
+
+static constexpr int VECTOR_SIZE = Scalar::size();
 
 // Until whenever CUDA supports constexpr properly
 #ifdef HOMMEXX_ENABLE_GPU
@@ -19,9 +22,6 @@ namespace Homme {
   #ifdef CAM
     #define QSIZE_D PCNST
   #endif
-
-  #define VECTOR_SIZE         1
-  #define VECTOR_END          (VECTOR_SIZE-1)
 
   #define NUM_PHYSICAL_LEV    PLEV
   #define NUM_TIME_LEVELS     3
@@ -35,13 +35,6 @@ namespace Homme {
   #ifdef CAM
     static constexpr const int QSIZE_D = PCNST;
   #endif
-
-  // Vector<VectorTag<SIMD<T, SpT>, l> > can use this for good results
-  // on, e.g., Power9, where AVX doesn't exist.
-  static constexpr int VECTOR_SIZE = HOMMEXX_VECTOR_SIZE;
-  static constexpr int VECTOR_END  = VECTOR_SIZE-1;
-
-  static_assert(VECTOR_SIZE>0, "Error: VECTOR_SIZE=0!");
 
   static constexpr const int NUM_PHYSICAL_LEV = PLEV;
   static constexpr const int NUM_LEV =

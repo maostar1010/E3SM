@@ -304,15 +304,9 @@ SET (HOMMEXX_ENABLE_GPU_F90 FALSE)
 IF (HOMME_USE_KOKKOS)
 
   IF (CUDA_BUILD OR HIP_BUILD)
-    SET (DEFAULT_VECTOR_SIZE 1)
     SET (HOMMEXX_ENABLE_GPU TRUE)
     SET (HOMMEXX_ENABLE_GPU_F90 TRUE) 
-  ELSE ()
-    SET (DEFAULT_VECTOR_SIZE 8)
   ENDIF()
-
-  SET (HOMMEXX_VECTOR_SIZE ${DEFAULT_VECTOR_SIZE} CACHE STRING
-	  "If AVX or Cuda or HIP don't take priority, use this software vector size.")
 
   IF (CMAKE_BUILD_TYPE_UPPER MATCHES "DEBUG" OR CMAKE_BUILD_TYPE_UPPER MATCHES "RELWITHDEBINFO")
     SET (HOMMEXX_DEBUG ON)
@@ -393,7 +387,7 @@ if (HOMME_BUILD_SCORPIO)
   # pio needs cime/externals/genf90/genf90.pl
   if (HOMME_USE_SCORPIO)
     # Need to use scorpio's older genf90 for now
-    SET(GENF90_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/utils/externals/scorpio/src/genf90)
+    SET(GENF90_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/externals/scorpio/src/genf90)
     SET(PIO_ENABLE_TOOLS OFF CACHE BOOL "Disabling Scorpio tool build")
     ADD_SUBDIRECTORY(utils/externals/scorpio)
   else ()

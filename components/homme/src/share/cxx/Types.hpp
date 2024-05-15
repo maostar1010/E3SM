@@ -8,16 +8,10 @@
 #define HOMMEXX_TYPES_HPP
 
 #include <Kokkos_Core.hpp>
+#include <Kokkos_SIMD.hpp>
 
-#include "PackTraits.hpp"
 #include "Config.hpp"
 #include "ExecSpaceDefs.hpp"
-#include "Dimensions.hpp"
-
-#include <vector/KokkosKernels_Vector.hpp>
-
-#define __MACRO_STRING(MacroVal) #MacroVal
-#define MACRO_STRING(MacroVal) __MACRO_STRING(MacroVal)
 
 namespace Homme {
 
@@ -30,22 +24,8 @@ using F90Ptr = Real *const; // Using this in a function signature emphasizes
 using CF90Ptr = const Real *const; // Using this in a function signature
                                    // emphasizes that the ordering is Fortran
 
-using VectorTagType = KokkosKernels::Batched::Experimental::SIMD<Real, ExecSpace>;
-
-using VectorType = KokkosKernels::Batched::Experimental::VectorTag<VectorTagType, VECTOR_SIZE>;
-
-using Scalar = KokkosKernels::Batched::Experimental::Vector<VectorType>;
-
-// Specialize PackTraits for Scalar
-template<>
-struct PackTraits<Scalar> {
-  static constexpr int pack_length = Scalar::vector_length;
-  using value_type = Real;
-};
-
-static_assert(sizeof(Scalar) > 0, "Vector type has 0 size");
-static_assert(sizeof(Scalar) == sizeof(Real[VECTOR_SIZE]), "Vector type is not correctly defined");
-static_assert(Scalar::vector_length>0, "Vector type is not correctly defined (vector_length=0)");
+using simd_abi_t = Kokkos::Experimental::simd_abi::ForSpace<ExecSpace>;
+using Scalar = Kokkos::Experimental::simd<Real,simd_abi_t>;
 
 using MemoryManaged   = Kokkos::MemoryTraits<Kokkos::Restrict>;
 using MemoryUnmanaged = Kokkos::MemoryTraits<Kokkos::Unmanaged | Kokkos::Restrict>;

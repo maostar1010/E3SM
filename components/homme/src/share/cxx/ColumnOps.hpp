@@ -6,7 +6,6 @@
 #include "CombineOps.hpp"
 #include "HommexxEnums.hpp"
 #include "utilities/SubviewUtils.hpp"
-#include "utilities/VectorUtils.hpp"
 
 namespace Homme {
 
@@ -45,6 +44,8 @@ class ColumnOps {
 public:
   using MIDPOINTS  = ColInfo<NUM_PHYSICAL_LEV>;
   using INTERFACES = ColInfo<NUM_INTERFACE_LEV>;
+
+  static constexpr VECTOR_END = VECTOR_SIZE-1;
 
   // Safety checks
   static_assert(!OnGpu<ExecSpace>::value || VECTOR_SIZE==1,
@@ -510,7 +511,7 @@ public:
           packed_sum[k] += input(LAST_PACK)[k];
         }
       }
-      sum = packed_sum.reduce_add();
+      sum = reduce(packed_sum);
     } else {
       Dispatch<>::parallel_reduce(kv.team,Kokkos::ThreadVectorRange(kv.team,LENGTH),
                                   [&](const int k, Real& accumulator) {
