@@ -37,8 +37,8 @@ struct ComposeTransportImpl {
   enum : int { np = NP };
   enum : int { packn = VECTOR_SIZE };
   enum : int { np2 = NP*NP };
-  enum : int { num_lev_pack = NUM_LEV };
-  enum : int { max_num_lev_pack = NUM_LEV_P };
+  enum : int { num_lev_pack = ColInfo<NUM_PHYSICAL_LEV>::NumPacks };
+  enum : int { max_num_lev_pack = ColInfo<NUM_INTERFACE_LEV>::NumPacks };
   enum : int { max_num_lev_aligned = max_num_lev_pack*packn };
   enum : int { num_phys_lev = NUM_PHYSICAL_LEV };
   enum : int { num_work = 12 };

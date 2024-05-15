@@ -26,10 +26,6 @@ namespace Homme {
   #define NUM_PHYSICAL_LEV    PLEV
   #define NUM_TIME_LEVELS     3
   #define Q_NUM_TIME_LEVELS   2
-
-  #define NUM_LEV             NUM_PHYSICAL_LEV
-  #define NUM_LEV_P           (NUM_LEV + 1)
-  #define NUM_INTERFACE_LEV   NUM_LEV_P
 #else
 
   #ifdef CAM
@@ -44,12 +40,7 @@ namespace Homme {
   static_assert(VECTOR_SIZE>0, "Error: VECTOR_SIZE=0!");
 
   static constexpr const int NUM_PHYSICAL_LEV = PLEV;
-  static constexpr const int NUM_LEV =
-      (NUM_PHYSICAL_LEV + VECTOR_SIZE - 1) / VECTOR_SIZE;
-
   static constexpr const int NUM_INTERFACE_LEV = NUM_PHYSICAL_LEV + 1;
-  static constexpr const int NUM_LEV_P =
-      (NUM_INTERFACE_LEV + VECTOR_SIZE - 1) / VECTOR_SIZE;
 
   static constexpr const int NUM_TIME_LEVELS = 3;
   static constexpr const int Q_NUM_TIME_LEVELS = 2;

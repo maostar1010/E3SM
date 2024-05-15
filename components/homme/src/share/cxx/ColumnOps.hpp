@@ -53,14 +53,15 @@ public:
   static_assert(MIDPOINTS::NumPacks>1,
                 "Error! Some logic may be wrong with only one column pack.\n");
 
-  using DefaultMidProvider = ExecViewUnmanaged<const Scalar [NUM_LEV]>;
-  using DefaultIntProvider = ExecViewUnmanaged<const Scalar [NUM_LEV_P]>;
+  template<typename T>
+  using view_1d = ExecViewUnmanaged<T*>;
+  using DefaultProvider = view_1d<const Scalar*>;
 
-  template<CombineMode CM = CombineMode::Replace, typename InputProvider = DefaultIntProvider>
+  template<CombineMode CM = CombineMode::Replace, typename InputProvider = DefaultProvider>
   KOKKOS_INLINE_FUNCTION
   static void compute_midpoint_values (const KernelVariables& kv,
                                 const InputProvider& x_i,
-                                const ExecViewUnmanaged<Scalar [NUM_LEV]>& x_m,
+                                const view_1d<Scalar>& x_m,
                                 const Real alpha = 1.0, const Real beta = 0.0)
   {
     // Compute midpoint quanitiy.
@@ -86,7 +87,8 @@ public:
         combine<CM>(tmp, x_m(ilev), alpha, beta);
       }
 
-      // Last level pack treated separately, since ilev+1 may throw depending if NUM_LEV=NUM_LEV_P
+      // Last level pack treated separately, since ilev+1 may throw depending on whether the
+      // number of midpoint packs is the same as the number of interface packs
       Scalar tmp = x_i(LAST_MID_PACK);
       tmp.shift_left(1);
       tmp[LAST_MID_PACK_END] = x_i(LAST_INT_PACK)[LAST_INT_PACK_END];
@@ -96,11 +98,11 @@ public:
     }
   }
 
-  template<CombineMode CM = CombineMode::Replace, typename InputProvider = DefaultMidProvider>
+  template<CombineMode CM = CombineMode::Replace, typename InputProvider = DefaultProvider>
   KOKKOS_INLINE_FUNCTION
   static void compute_interface_values (const KernelVariables& kv,
                                  const InputProvider& x_m,
-                                 const ExecViewUnmanaged<Scalar [NUM_LEV_P]>& x_i,
+                                 const view_1d<Scalar>& x_i,
                                  const Real alpha = 1.0, const Real beta = 0.0)
   {
     // Compute interface quanitiy.
@@ -116,13 +118,14 @@ public:
         combine<CM>(x_m(NUM_PHYSICAL_LEV-1), x_i(NUM_INTERFACE_LEV-1), alpha, beta);
       });
     } else {
+      constexpr int NUM_MID_PACKS     = MIDPOINTS::NumPacks
       constexpr int LAST_MID_PACK     = MIDPOINTS::LastPack;
       constexpr int LAST_MID_PACK_END = MIDPOINTS::LastPackEnd;
       constexpr int LAST_INT_PACK     = INTERFACES::LastPack;
       constexpr int LAST_INT_PACK_END = INTERFACES::LastPackEnd;
 
-      // Try to use SIMD operations as much as possible: the last NUM_LEV-1 packs are treated uniformly, and can be vectorized
-      for (int ilev=1; ilev<NUM_LEV; ++ilev) {
+      // Try to use SIMD operations as much as possible: the last NUM_MID_PACKS-1 packs are treated uniformly, and can be vectorized
+      for (int ilev=1; ilev<NUM_MID_PACKS; ++ilev) {
         Scalar tmp = x_m(ilev);
         tmp.shift_right(1);
         tmp[0] = x_m(ilev-1)[VECTOR_END];
@@ -147,15 +150,15 @@ public:
 
   // Similar to the above, but uses midpoints/interface weights when computing the average
   template<CombineMode CM = CombineMode::Replace,
-           typename WeightsMidProvider = DefaultMidProvider,
-           typename WeightsIntProvider = DefaultIntProvider,
-           typename InputProvider = DefaultMidProvider>
+           typename WeightsMidProvider = DefaultProvider,
+           typename WeightsIntProvider = DefaultProvider,
+           typename InputProvider = DefaultProvider>
   KOKKOS_INLINE_FUNCTION
   static void compute_interface_values (const KernelVariables& kv,
                                  const WeightsMidProvider& weights_m,
                                  const WeightsIntProvider& weights_i,
                                  const InputProvider& x_m,
-                                 const ExecViewUnmanaged<Scalar [NUM_LEV_P]>& x_i,
+                                 const view_1d<Scalar>& x_i,
                                  const Real alpha = 1.0, const Real beta = 0.0)
   {
     // Compute interface quanitiy.
@@ -171,13 +174,14 @@ public:
         combine<CM>(x_m(NUM_PHYSICAL_LEV-1),x_i(NUM_INTERFACE_LEV-1),alpha,beta);
       });
     } else {
+      constexpr int NUM_MID_PACKS     = MIDPOINTS::NumPacks
       constexpr int LAST_MID_PACK     = MIDPOINTS::LastPack;
       constexpr int LAST_MID_PACK_END = MIDPOINTS::LastPackEnd;
       constexpr int LAST_INT_PACK     = INTERFACES::LastPack;
       constexpr int LAST_INT_PACK_END = INTERFACES::LastPackEnd;
 
-      // Try to use SIMD operations as much as possible: the last NUM_LEV-1 packs are treated uniformly, and can be vectorized
-      for (int ilev=1; ilev<NUM_LEV; ++ilev) {
+      // Try to use SIMD operations as much as possible: the last NUM_MID_PACKS-1 packs are treated uniformly, and can be vectorized
+      for (int ilev=1; ilev<NUM_MID_PACKS; ++ilev) {
         Scalar tmp = x_m(ilev)*weights_m(ilev);
         tmp.shift_right(1);
         tmp[0] = x_m(ilev-1)[VECTOR_END]*weights_m(ilev-1)[VECTOR_END];
@@ -201,11 +205,11 @@ public:
   }
 
   template<CombineMode CM = CombineMode::Replace,
-           typename InputProvider = DefaultIntProvider>
+           typename InputProvider = DefaultProvider>
   KOKKOS_INLINE_FUNCTION
   static void compute_midpoint_delta (const KernelVariables& kv,
                                const InputProvider& x_i,
-                               const ExecViewUnmanaged<Scalar [NUM_LEV]>& dx_m,
+                               const view_1d<Scalar>& dx_m,
                                const Real alpha = 1.0, const Real beta = 0.0)
   {
     // Compute increment of interface values at midpoints.
@@ -221,7 +225,7 @@ public:
       constexpr int LAST_INT_PACK     = INTERFACES::LastPack;
       constexpr int LAST_INT_PACK_END = INTERFACES::LastPackEnd;
 
-      // Try to use SIMD operations as much as possible. First NUM_LEV-1 packs can be treated the same
+      // Try to use SIMD operations as much as possible. First NUM_MID_PACKS-1 packs can be treated the same
       for (int ilev=0; ilev<LAST_MID_PACK; ++ilev) {
         Scalar tmp = x_i(ilev);
         tmp.shift_left(1);
@@ -238,11 +242,11 @@ public:
   }
 
   template<CombineMode CM = CombineMode::Replace,
-           typename InputProvider = DefaultMidProvider>
+           typename InputProvider = DefaultProvider>
   KOKKOS_INLINE_FUNCTION
   static void compute_interface_delta (const KernelVariables& kv,
                                 const InputProvider& x_m,
-                                const ExecViewUnmanaged<Scalar [NUM_LEV_P]> dx_i,
+                                const view_1d<Scalar>& dx_i,
                                 const Real alpha = 1.0, const Real beta = 0.0,
                                 const Real bcVal = 0.0)
   {
@@ -308,7 +312,7 @@ public:
   KOKKOS_INLINE_FUNCTION
   static void column_scan (const KernelVariables& kv,
                     const InputProvider& input_provider,
-                    const ExecViewUnmanaged<Scalar [ColInfo<LENGTH>::NumPacks]>& sum,
+                    const view_1d<Scalar>& sum,
                     const Real s0 = 0.0)
   {
     column_scan_impl<VECTOR_SIZE,Forward,Inclusive,LENGTH>(kv,input_provider,sum,s0);
@@ -319,7 +323,7 @@ public:
   static typename std::enable_if<(PackLength>1)>::type
   column_scan_impl (const KernelVariables& /* kv */,
                     const InputProvider& input_provider,
-                    const ExecViewUnmanaged<Scalar [ColInfo<LENGTH>::NumPacks]>& sum,
+                    const view_1d<Scalar>& sum,
                     const Real s0 = 0.0)
   {
     constexpr int OFFSET             = Inclusive ? 0 : 1;
@@ -392,7 +396,7 @@ public:
   static typename std::enable_if<PackLength==1>::type
   column_scan_impl (const KernelVariables& kv,
                     const InputProvider& input_provider,
-                    const ExecViewUnmanaged<Scalar [ColInfo<LENGTH>::NumPacks]>& sum,
+                    const view_1d<Scalar>& sum,
                     const Real s0 = 0.0)
   {
     if (Forward) {
@@ -437,35 +441,33 @@ public:
 
   // Special case where input is on midpoints, but output is on interfaces.
   // In this case (for forward case), we perform sum(k+1) = sum(k) + provider(k),
-  // for k=0,NUM_LEV. This can be done with an exclusive sum, using sum(0) as
-  // initial value. Similarly for backward sum
+  // for k=0,NUM_PHYSICAL_LEV. This can be done with an exclusive sum, using sum(0) as
+  // initial value. Similarly for backward sum.
   // Note: we are *assuming* that the first (or last, for bwd) entry of  sum
   //       contains the desired initial value
   template<bool Forward,typename InputProvider>
   KOKKOS_INLINE_FUNCTION
   static void column_scan_mid_to_int (const KernelVariables& kv,
                                const InputProvider& input_provider,
-                               const ExecViewUnmanaged<Scalar [NUM_LEV_P]>& sum)
+                               const view_1d<Scalar>& sum)
   {
     if (Forward) {
       // It's safe to pass the output as it is, and claim is Exclusive over NUM_INTERFACE_LEV
       column_scan_impl<VECTOR_SIZE,true,false,NUM_INTERFACE_LEV>(kv,input_provider,sum,sum(0)[0]);
     } else {
       // Tricky: likely, the provider does not provide input at NUM_INTEFACE_LEV-1. So we cast this scan sum
-      //         into an inclusive sum over NUM_PHYSICAL_LEV, with output cropped to NUM_LEV packs.
-      // Note: we also need to init sum at NUM_PHYSICAL_LEV-1
+      //         into an inclusive sum over NUM_PHYSICAL_LEV, after initing sum at NUM_PHYSICAL_LEV-1
 
       constexpr int LAST_MID_PACK     = MIDPOINTS::LastPack;
       constexpr int LAST_MID_PACK_END = MIDPOINTS::LastPackEnd;
       constexpr int LAST_INT_PACK     = INTERFACES::LastPack;
       constexpr int LAST_INT_PACK_END = INTERFACES::LastPackEnd;
 
-      ExecViewUnmanaged<Scalar[NUM_LEV]> sum_cropped(sum.data());
       const Real s0 = sum(LAST_INT_PACK)[LAST_INT_PACK_END];
       Kokkos::single(Kokkos::PerThread(kv.team),[&](){
-        sum_cropped(LAST_MID_PACK)[LAST_MID_PACK_END] = s0;
+        sum(LAST_MID_PACK)[LAST_MID_PACK_END] = s0;
       });
-      column_scan_impl<VECTOR_SIZE,false,true,NUM_PHYSICAL_LEV>(kv,input_provider,sum_cropped,s0);
+      column_scan_impl<VECTOR_SIZE,false,true,NUM_PHYSICAL_LEV>(kv,input_provider,sum,s0);
     }
   }
 
