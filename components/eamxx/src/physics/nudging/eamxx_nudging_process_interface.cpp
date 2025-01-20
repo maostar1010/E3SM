@@ -203,113 +203,13 @@ void Nudging::initialize_impl (const RunType /* run_type */)
 {
   using namespace ShortFieldTagsNames;
 
-  // The first thing we do is time interpolation.
-  // The second thing we do is horiz interpolation. The reason for doing horizontal
-  // before vertical is that we do not have a coarse p_mid (which would be needed
-  // as tgt pressure during vert remap). To get it, we'd have to "remap back" p_mid,
-  // but that seems overly complicated. For horiz remap we do not need anything
-  // on the target grid.
-
-  // The "intermediate" grid, is the grid after horiz remap, and before vert remap
-  auto grid_tmp = m_grid->clone("after_horiz_before_vert",true);
-  grid_tmp->reset_num_vertical_lev(m_num_src_levs);
-
-  if (m_refine_remap) {
-    // P2P remapper
-    m_horiz_remapper = std::make_shared<RefiningRemapperP2P>(grid_tmp, m_refine_remap_file);
-  } else {
-    // We set up an IdentityRemapper, specifying that tgt is an alias
-    // of src, so that the remap method will do nothing
-    auto r = std::make_shared<IdentityRemapper>(grid_tmp);
-    r->set_aliasing(IdentityRemapper::TgtAliasSrc);
-    m_horiz_remapper = r;
-  }
-
-  // Now that we have the remapper, we can grab the grid where the input data lives
-  auto grid_ext = m_horiz_remapper->get_src_grid();
-
-  // Initialize the time interpolator and horiz remapper
-  m_time_interp = util::TimeInterpolation(grid_ext, m_datafiles);
-  m_time_interp.set_logger(m_atm_logger,"[EAMxx::Nudging] Reading nudging data");
-
-  // NOTE: we are ASSUMING all fields are 3d and scalar!
-  const auto layout_ext = grid_ext->get_3d_scalar_layout(true);
-  const auto layout_tmp = grid_tmp->get_3d_scalar_layout(true);
-  const auto layout_atm = m_grid->get_3d_scalar_layout(true);
-  m_horiz_remapper->registration_begins();
-  for (auto name : m_fields_nudge) {
-    std::string name_ext = name + "_ext";
-    std::string name_tmp = name + "_tmp";
-
-    // First copy of the field: what's read from file, and time-interpolated.
-    auto field_ext = create_helper_field(name_ext, layout_ext, grid_ext->name());
-
-    // Second copy of the field: after horiz interp (alias "ext" if no remap)
-    Field field_tmp;
-    if (m_refine_remap) {
-      field_tmp = create_helper_field(name_tmp, layout_tmp, grid_tmp->name());
-    } else {
-      field_tmp = field_ext.alias(name_tmp);
-      m_helper_fields[name_tmp] = field_tmp;
-    }
-
-    // Add the field to the time interpolator
-    m_time_interp.add_field(field_ext.alias(name), true);
-
-    // Register the fields with the remapper
-    m_horiz_remapper->register_field(field_ext, field_tmp);
-
-    if (m_timescale>0) {
-      // Third copy of the field: after vert interpolation.
-      // We cannot store directly in get_field_out(name),
-      // since we need to back out tendencies
-      create_helper_field(name, layout_atm, m_grid->name());
-    } else {
-      // We do not need to back out any tendency; the input data is used
-      // to directly replace the atm state
-      m_helper_fields[name] = get_field_out_wrap(name);
-    }
-  }
-
-  // A helper field, where we copy each field after horiz remap, padding it
-  // at top/bot, to allow vert lin interp to extrapolate outside the bounds of p_mid
-  FieldLayout layout_padded ({COL,LEV},{m_num_cols,m_num_src_levs+2});
-  create_helper_field("padded_field",layout_padded,"");
-
-  if (m_src_pres_type == TIME_DEPENDENT_3D_PROFILE && !m_skip_vert_interpolation) {
-    // If the pressure profile is 3d and time-dep, we need to interpolate (in time/horiz)
-    auto pmid_ext = create_helper_field("p_mid_ext", layout_ext, grid_ext->name());
-    m_time_interp.add_field(pmid_ext.alias("p_mid"),true);
-    Field pmid_tmp;
-    if (m_refine_remap) {
-      pmid_tmp = create_helper_field("p_mid_tmp", layout_tmp, grid_tmp->name());
-    } else {
-      pmid_tmp = pmid_ext.alias("p_mid_tmp");
-      m_helper_fields["p_mid_tmp"] = pmid_tmp;
-    }
-    m_horiz_remapper->register_field(pmid_ext,pmid_tmp);
-    create_helper_field("padded_p_mid_tmp",layout_padded,"");
-  } else if (m_src_pres_type == STATIC_1D_VERTICAL_PROFILE) {
-    // For static 1D profile, we can read p_mid now
-    auto pmid_ext = create_helper_field("p_mid_ext", grid_ext->get_vertical_layout(true), grid_ext->name());
-    AtmosphereInput src_input(m_static_vertical_pressure_file,grid_ext,{pmid_ext.alias("p_levs")},true);
-    src_input.read_variables(-1);
-
-    // For static 1d profile, p_mid_tmp is an alias of p_mid_ext
-    m_helper_fields["p_mid_tmp"] = pmid_ext.alias("p_mid_tmp");
-
-    // The padded p_mid is also 1d
-    FieldLayout pmid1d_padded_layout({COL},{m_num_src_levs+2});
-    create_helper_field("padded_p_mid_tmp",pmid1d_padded_layout,"");
-  }
-
-  // Close the registration
-  m_time_interp.initialize_data_from_files();
-  m_horiz_remapper->registration_ends();
+  std::vector<Field> fields;
+  for (const auto& fn : m_fields_nudge)
+    fields.push_back(get_field_out(fn);
+  m_data_interpolation = std::make_shared<util::DataInterpolation>(m_grid,fields);
 
   // load nudging weights from file
-  // NOTE: the regional nudging use the same grid as the run, no need to
-  // do the interpolation.
+  // NOTE: the regional nudging use the same grid as the run, no need to do the interpolation.
   if (m_use_weights) {
     auto nudging_weights = create_helper_field("nudging_weights", layout_atm, m_grid->name());
     AtmosphereInput src_weights_input(m_weights_file, m_grid, {nudging_weights},true);
@@ -328,13 +228,11 @@ void Nudging::run_impl (const double dt)
   using view_1d       = KT::view_1d<PackT>;
   using view_2d       = KT::view_2d<PackT>;
 
-  // Have to add dt because first time iteration is at 0 seconds where you will
-  // not have any data from the field. The timestamp is only iterated at the
-  // end of the full step in scream.
+  // Perform interpolation
+  // Note: the timestamp is updated by the base class AFTER run_impl,
+  //       so add dt to get the ACTUAL current time
   auto ts = timestamp()+dt;
-
-  // Perform time interpolation
-  m_time_interp.perform_time_interpolation(ts);
+  m_data_interpolation->run(ts);
 
   // If the input data contains "masked" values (sometimes also called "filled" values),
   // the horiz remapping would smear them around. To prevent that, we need to "cure"

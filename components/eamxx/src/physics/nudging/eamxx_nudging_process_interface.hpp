@@ -3,7 +3,7 @@
 
 #include "share/atm_process/atmosphere_process.hpp"
 
-#include "share/util/eamxx_time_interpolation.hpp"
+#include "share/util/eamxx_data_interpolation.hpp"
 #include "share/grid/remap/abstract_remapper.hpp"
 
 #include <ekat/ekat_parameter_list.hpp>
@@ -87,15 +87,17 @@ protected:
 
   /* Nudge from coarse data */
   // if true, remap coarse data to fine grid
-  bool m_refine_remap;
+  // bool m_refine_remap;
   // file containing coarse data mapping
-  std::string m_refine_remap_file;
+  // std::string m_refine_remap_file;
   // (refining) remapper object
-  std::shared_ptr<scream::AbstractRemapper> m_horiz_remapper;
+  // std::shared_ptr<scream::AbstractRemapper> m_horiz_remapper;
   // (refining) remapper vertical cutoff
   Real m_refine_remap_vert_cutoff;
 
-  util::TimeInterpolation m_time_interp;
+  // util::TimeInterpolation m_time_interp;
+
+  std::shared_ptr<util::DataInterpolation> m_data_interpolation;
 }; // class Nudging
 
 } // namespace scream
