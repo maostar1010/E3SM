@@ -570,7 +570,7 @@ void MAMMicrophysics::run_impl(const double dt) {
        const int team_size=nlev;
 #else
        const int team_size=1;
-#endif  
+#endif
   const auto policy =
        ekat::ExeSpaceUtils<KT::ExeSpace>::get_team_policy_force_team_size(ncol, team_size);
 
@@ -802,6 +802,12 @@ void MAMMicrophysics::run_impl(const double dt) {
   const int surface_lev        = nlev - 1;                 // Surface level
   const auto &index_season_lai = index_season_lai_;
   const int pcnst              = mam4::pcnst;
+
+  Kokkos::Array<Real, gas_pcnst> molar_mass_g_per_mol_tmp;
+  for (int i = 0; i < gas_pcnst; ++i) {
+    molar_mass_g_per_mol_tmp[i] = mam4::gas_chemistry::adv_mass[i];  // host-only access
+  }
+
   //NOTE: we need to initialize photo_rates_
   Kokkos::deep_copy(photo_rates_,0.0);
   // loop over atmosphere columns and compute aerosol microphyscs
@@ -920,7 +926,15 @@ void MAMMicrophysics::run_impl(const double dt) {
         const auto aqh2so4_flx_col = ekat::subview(aqh2so4_flx, icol);  // deposition flux of h2so4 [mole/mole/s]
         Real dflx_col[gas_pcnst] = {};  // deposition velocity [1/cm/s]
         Real dvel_col[gas_pcnst] = {};  // deposition flux [1/cm^2/s]
+        // mam::microphysics wants the full column of these tendencies
+        // TODO: is it better for each column's threadTeam to have its own 3d view,
+        //       or subview into a 4d view that contains all 'ncol' columns of these?
+        view_3d qgcm_tendaa("diag_tendency-col", nlev, gas_pcnst, mam4::microphysics::nqtendaa());
+        view_3d qqcwgcm_tendaa("diag_tendency_cw-col", nlev, gas_pcnst, mam4::microphysics::nqqcwtendaa());
+        Kokkos::deep_copy(qgcm_tendaa, 0.0);
+        Kokkos::deep_copy(qqcwgcm_tendaa, 0.0);
         // Output: values are dvel, dflx
+        // Diagnostic Output: qgcm_tendaa, qqcwgcm_tendaa
         // Input/Output: progs::stateq, progs::qqcw
         team.team_barrier();
         mam4::microphysics::perform_atmospheric_chemistry_and_microphysics(
@@ -937,8 +951,9 @@ void MAMMicrophysics::run_impl(const double dt) {
             offset_aerosol, config.linoz.o3_sfc, config.linoz.o3_tau,
             config.linoz.o3_lbl, dry_diameter_icol, wet_diameter_icol,
             wetdens_icol, dry_atm.phis(icol), cmfdqr, prain_icol, nevapr_icol,
-            work_set_het_icol, drydep_data, aqso4_flx_col,  aqh2so4_flx_col, dvel_col, dflx_col, progs);
-
+            work_set_het_icol, drydep_data, aqso4_flx_col,  aqh2so4_flx_col,
+            dvel_col, dflx_col, qgcm_tendaa, qqcwgcm_tendaa, progs);
+        
         team.team_barrier();
         // Update constituent fluxes with gas drydep fluxes (dflx)
         // FIXME: Possible units mismatch (dflx is in kg/cm2/s but
@@ -947,6 +962,7 @@ void MAMMicrophysics::run_impl(const double dt) {
         Kokkos::parallel_for(Kokkos::TeamVectorRange(team, offset_aerosol, pcnst), [&](int ispc) {
           constituent_fluxes(icol, ispc) -= dflx_col[ispc - offset_aerosol];
         });
+
       });  // parallel_for for the column loop
   Kokkos::fence();
 
@@ -958,10 +974,6 @@ void MAMMicrophysics::run_impl(const double dt) {
   // NOTE: These indices should match the species in extfrc_lst
   // TODO: getting rid of hard-coded indices
   Kokkos::Array<int, extcnt> extfrc_pcnst_index = {3, 6, 14, 27, 28, 13, 18, 30, 5};
-  Kokkos::Array<Real, gas_pcnst> molar_mass_g_per_mol_tmp;
-  for (int i = 0; i < gas_pcnst; ++i) {
-    molar_mass_g_per_mol_tmp[i] = mam4::gas_chemistry::adv_mass[i];  // host-only access
-  }
 
   // Transpose extfrc_ from internal layout [ncol][nlev][extcnt]
   // to output layout [ncol][extcnt][nlev]
