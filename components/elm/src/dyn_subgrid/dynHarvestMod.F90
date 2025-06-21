@@ -76,7 +76,7 @@ module dynHarvestMod
 
   ! the units flag must match the units of harvest_varnames
   ! set this here because dynHarvest_init is called after alm_fates%init
-  ! this flag is accessed only if namelist do_harvest is TRUE
+  ! this flag is accessed only if namelist do_cn_harvest is TRUE
 
   integer, public, parameter    :: wood_harvest_units = 2    ! 1 = area fraction, 2 = carbon
   real(r8), allocatable, public :: harvest_rates(:,:) ! harvest rates
@@ -189,8 +189,8 @@ contains
           deallocate(this_data)
        end if
 
-       ! FATES does not make use of the get_do_harvest mechanism.  Make sure this is always false for fates runs.
-       if (use_fates) do_harvest = .false.
+       ! FATES does not make use of the get_do_cn_harvest mechanism.  Make sure this is always false for fates runs.
+       if (use_fates) do_cn_harvest = .false.
     end if
   end subroutine dynHarvest_interp_harvest_types
 

@@ -4837,6 +4837,7 @@ contains
           call seq_diag_ice_mct(ice(ens1), fractions_ix(ens1), infodata, do_x2i=.true.)
           if (do_bgc_budgets) then
              call seq_diagBGC_ice_mct(ice(ens1), fractions_ix(ens1), infodata, do_x2i=.true.)
+          endif
        endif
        if (glc_present) then
           call seq_diag_glc_mct(glc(ens1), fractions_gx(ens1), infodata, do_x2g=.true.)
@@ -4884,6 +4885,7 @@ contains
           call seq_diag_ice_mct(ice(ens1), fractions_ix(ens1), infodata, do_i2x=.true.)
           if (do_bgc_budgets) then
              call seq_diagBGC_ice_mct(ice(ens1), fractions_ix(ens1), infodata, do_i2x=.true.)
+          endif
        endif
        if (glc_present) then
           call seq_diag_glc_mct(glc(ens1), fractions_gx(ens1), infodata, do_g2x=.true.)

@@ -39,7 +39,6 @@ module dynSubgridDriverMod
   use elm_varctl          , only : iac_active
   use shr_log_mod         , only : errMsg => shr_log_errMsg
   use decompMod           , only : bounds_type, BOUNDS_LEVEL_PROC
-  use shr_kind_mod        , only : r8 => shr_kind_r8
   use ColumnType          , only : col_pp
   use VegetationType      , only : veg_pp
   use elm_varctl          , only : iulog

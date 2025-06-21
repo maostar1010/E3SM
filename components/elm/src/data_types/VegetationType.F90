@@ -39,6 +39,7 @@ module VegetationType
   !       the above ilist of default PFTs will be replaced, and arrays of sizes as below will be changed as well.
 
   use shr_kind_mod   , only : r8 => shr_kind_r8
+  use shr_infnan_mod , only : nan => shr_infnan_nan, assignment(=)
   use elm_varcon     , only : ispval, spval
   use elm_varctl     , only : use_fates, iac_active
   use elm_varctl     , only : use_fates, iulog

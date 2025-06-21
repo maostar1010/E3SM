@@ -107,7 +107,7 @@ contains
     ! Extract into clm variables from iac coupled inputs
     ! 
     ! !USES:
-    use clm_time_manager, only : get_curr_yearfrac
+    use elm_time_manager, only : get_curr_yearfrac
     use landunit_varcon , only : istsoil
     use elm_varctl, only : iac_active, iulog
     use netcdf   !avd - this is for a diagnostic file
