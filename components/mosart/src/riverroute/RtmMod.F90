@@ -722,7 +722,16 @@ contains
           allocate(itempr_3d(rtmlon, rtmlat, max_downstream), stat=ier)
           if (ier /= 0) call shr_sys_abort(subname//' ERROR: allocation failed for itempr_3d')
           
-          call ncd_io(ncid=ncid, varname='dnID', flag='read', data=itempr_3d, readvar=found)
+          ! Try to read 3D variable - use pio_get_var for full global read
+          call pio_seterrorhandling(ncid, PIO_BCAST_ERROR)
+          ier = pio_inq_varid(ncid, 'dnID', vardesc)
+          if (ier == PIO_NOERR) then
+             ier = pio_get_var(ncid, vardesc, itempr_3d)
+             found = (ier == PIO_NOERR)
+          else
+             found = .false.
+          endif
+          call pio_seterrorhandling(ncid, PIO_INTERNAL_ERROR)
           if (found) then
              if (masterproc) write(iulog,*) 'Read 3D structured dnID(lon,lat,downstream), min=',minval(itempr_3d),' max=',maxval(itempr_3d)
              do k=1,max_downstream
@@ -751,7 +760,16 @@ contains
           allocate(itempr_3d(rtmlon, rtmlat, max_downstream), stat=ier)
           if (ier /= 0) call shr_sys_abort(subname//' ERROR: allocation failed for itempr_3d')
           
-          call ncd_io(ncid=ncid, varname='dnID', flag='read', data=itempr_3d, readvar=found)
+          ! Try to read 3D variable - use pio_get_var for full global read
+          call pio_seterrorhandling(ncid, PIO_BCAST_ERROR)
+          ier = pio_inq_varid(ncid, 'dnID', vardesc)
+          if (ier == PIO_NOERR) then
+             ier = pio_get_var(ncid, vardesc, itempr_3d)
+             found = (ier == PIO_NOERR)
+          else
+             found = .false.
+          endif
+          call pio_seterrorhandling(ncid, PIO_INTERNAL_ERROR)
           if (found) then
              if (masterproc) write(iulog,*) 'Read 3D unstructured dnID, min=',minval(itempr_3d),' max=',maxval(itempr_3d)
              do k=1,max_downstream
