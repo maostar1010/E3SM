@@ -185,6 +185,7 @@ contains
     integer ,allocatable :: itempr(:,:)       ! temporary buffer
     integer ,allocatable :: itempr_3d(:,:,:)  ! temporary buffer for multi-dimensional dnID
     integer :: ndims, actual_downstream_size  ! for NetCDF dimension checking
+    type(var_desc_t) :: vardesc               ! pio variable descriptor
     integer ,allocatable :: idxocn(:)         ! downstream ocean outlet cell
     integer ,allocatable :: nupstrm(:)        ! number of upstream cells including own cell
     integer ,allocatable :: pocn(:)           ! pe number assigned to basin
