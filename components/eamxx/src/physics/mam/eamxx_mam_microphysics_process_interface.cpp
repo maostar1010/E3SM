@@ -811,6 +811,7 @@ void MAMMicrophysics::run_impl(const double dt) {
   const int surface_lev        = nlev - 1;                 // Surface level
   const auto &index_season_lai = index_season_lai_;
   const int pcnst              = mam4::pcnst;
+  const bool extra_mam4_diags  = extra_mam4_diags_;
   //NOTE: we need to initialize photo_rates_
   Kokkos::deep_copy(photo_rates_,0.0);
   // loop over atmosphere columns and compute aerosol microphyscs
@@ -926,7 +927,7 @@ void MAMMicrophysics::run_impl(const double dt) {
         }
         // These output values need to be put somewhere:
         mam4::MicrophysDiagnosticArrays diagnostic_arrays;
-        if (extra_mam4_diags_) {
+        if (extra_mam4_diags) {
         // deposition flux of so4 [kg/m2/s] and deposition flux of h2so4 [kg/m2/s]
           diagnostic_arrays.aqso4_column_integrated_flux = ekat::subview(aqso4_flx, icol);  
           diagnostic_arrays.aqh2so4_column_integrated_flux = ekat::subview(aqh2so4_flx, icol);  
