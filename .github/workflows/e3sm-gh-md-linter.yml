@@ -3,6 +3,7 @@ name: markdown
 # if .md files are touched in a PR, lint them!
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: ["master"]
     paths:
